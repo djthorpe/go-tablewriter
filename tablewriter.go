@@ -3,7 +3,6 @@ package tablewriter
 import (
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 )
@@ -79,9 +78,7 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 			}
 			header = true
 		}
-		if values, err := meta.Values(row); err != nil {
-			result = errors.Join(result, err)
-		} else if err := w.writeRow(meta, values); err != nil {
+		if err := w.writeRow(meta, row); err != nil {
 			result = errors.Join(result, err)
 		}
 	}
@@ -115,14 +112,12 @@ func (w *TableWriter) writeHeader(meta *tablemeta) error {
 	return nil
 }
 
-func (w *TableWriter) writeRow(meta *tablemeta, values []any) error {
+func (w *TableWriter) writeRow(meta *tablemeta, row any) error {
 	switch {
 	case w.csv != nil:
-		strs := make([]string, len(values))
-		for i, v := range values {
-			strs[i] = fmt.Sprint(v)
-		}
-		if err := w.csv.Write(strs); err != nil {
+		if values, err := meta.StringValues(row); err != nil {
+			return err
+		} else if err := w.csv.Write(values); err != nil {
 			return err
 		}
 	default:

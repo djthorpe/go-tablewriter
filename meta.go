@@ -1,6 +1,7 @@
 package tablewriter
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -14,8 +15,10 @@ import (
 
 type tablemeta struct {
 	opts
-	cols []*columnmeta // The columns for the table
-	typ  reflect.Type  // The underlying type
+	cols    []*columnmeta // The columns for the table
+	typ     reflect.Type  // The underlying type
+	values  []any         // The current row
+	strings []string      // The current row as strings
 }
 
 type columnmeta struct {
@@ -68,8 +71,10 @@ func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (*tablemeta, error) 
 		}
 	}
 
-	// Set colummns
+	// Set colummns, values, strings
 	meta.cols = asColumns(meta.typ, meta.opts.tag)
+	meta.values = make([]any, len(meta.cols))
+	meta.strings = make([]string, len(meta.cols))
 
 	// Return success
 	return meta, nil
@@ -114,11 +119,10 @@ func (meta *tablemeta) NumField() int {
 
 // Return the field names
 func (meta *tablemeta) Fields() []string {
-	result := make([]string, 0, len(meta.cols))
-	for _, col := range meta.cols {
-		result = append(result, col.Name)
+	for i, col := range meta.cols {
+		meta.strings[i] = col.Name
 	}
-	return result
+	return meta.strings
 }
 
 // Return the field values in the correct order. The input value should be
@@ -132,22 +136,40 @@ func (meta *tablemeta) Values(v any) ([]any, error) {
 		rv = rv.Elem()
 	}
 	if rv.Type() != meta.typ {
-		return nil, ErrBadParameter.Withf("expected %q", meta.typ)
+		return nil, ErrBadParameter.Withf("expected type %q", meta.typ)
 	}
 
 	// Create a slice of values
-	result := make([]any, len(meta.cols))
 	for i, col := range meta.cols {
-		// Get the field value
 		fv := rv.FieldByIndex(col.Index)
 		if !fv.IsValid() {
-			return nil, ErrBadParameter.With("invalid field")
+			return nil, ErrBadParameter.Withf("invalid field %q", col.Key)
 		}
-		result[i] = fv.Interface()
+		meta.values[i] = fv.Interface()
 	}
 
 	// Return success
-	return result, nil
+	return meta.values, nil
+}
+
+// Return the field values as marshalled strings in the correct order.
+// The input value should be a struct
+func (meta *tablemeta) StringValues(v any) ([]string, error) {
+	var result error
+	values, err := meta.Values(v)
+	if err != nil {
+		return nil, err
+	}
+	for i, value := range values {
+		if bytes, err := marshal(meta.cols[i], value); err != nil {
+			result = errors.Join(result, err)
+		} else {
+			meta.strings[i] = string(bytes)
+		}
+	}
+
+	// Return any errors
+	return meta.strings, result
 }
 
 ///////////////////////////////////////////////////////////////////////////////
