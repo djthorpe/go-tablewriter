@@ -55,6 +55,7 @@ func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (*tablemeta, error) 
 
 	// Set default options
 	meta.opts.tag = defaultTagName
+	meta.opts.null = defaultNull
 	meta.opts.format = FormatCSV
 	meta.opts.delim = ','
 
@@ -163,6 +164,8 @@ func (meta *tablemeta) StringValues(v any) ([]string, error) {
 	for i, value := range values {
 		if bytes, err := marshal(meta.cols[i], value); err != nil {
 			result = errors.Join(result, err)
+		} else if bytes == nil {
+			meta.strings[i] = meta.opts.null
 		} else {
 			meta.strings[i] = string(bytes)
 		}

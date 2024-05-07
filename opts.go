@@ -7,6 +7,7 @@ type opts struct {
 	tag    string // Tag used to get additional struct metadata
 	delim  rune   // Delimiter used to separate fields
 	header bool   // Whether to output a header
+	null   string // How the nil value is represented in the output
 	format
 }
 
@@ -56,6 +57,14 @@ func OptFieldDelim(delim rune) TableOpt {
 func OptOutputCSV() TableOpt {
 	return func(o *opts) error {
 		o.format = FormatCSV
+		return nil
+	}
+}
+
+// Set how the nil value is represented in the output, defaults to "<nil>"
+func OptNull(v string) TableOpt {
+	return func(o *opts) error {
+		o.null = v
 		return nil
 	}
 }

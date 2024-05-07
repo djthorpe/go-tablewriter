@@ -2,6 +2,7 @@ package tablewriter
 
 import (
 	"encoding/json"
+	"reflect"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,8 +18,8 @@ type Marshaller interface {
 // Convert any value to a byte array. If quote is true, then the value is
 // quoted if it is a string.
 func marshal(meta *columnmeta, v any) ([]byte, error) {
-	// Returns nil if v is nil
-	if v == nil {
+	// Check for nil
+	if v == nil || (reflect.TypeOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()) {
 		return nil, nil
 	}
 	// Use marshaller if implemented

@@ -22,6 +22,10 @@ type TestABEF struct {
 	F string
 }
 
+type TestG struct {
+	G *string
+}
+
 func Test_tablewriter_000(t *testing.T) {
 	assert := assert.New(t)
 	writer := tablewriter.New(os.Stdout)
@@ -102,4 +106,14 @@ func Test_tablewriter_007(t *testing.T) {
 	err := writer.Write(table)
 	assert.NoError(err)
 	assert.Equal("a,b\nhello,world\n", buf.String())
+}
+
+func Test_tablewriter_008(t *testing.T) {
+	assert := assert.New(t)
+	buf := new(strings.Builder)
+	writer := tablewriter.New(buf, tablewriter.OptNull("NULL"))
+	table := TestG{}
+	err := writer.Write(table)
+	assert.NoError(err)
+	assert.Equal("NULL\n", buf.String())
 }
