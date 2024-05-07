@@ -32,6 +32,9 @@ type TableMeta interface {
 
 	// Return the number of output columns
 	NumField() int
+
+	// Return the field names
+	Fields() []string
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,6 +52,8 @@ func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (*tablemeta, error) 
 
 	// Set default options
 	meta.opts.tag = defaultTagName
+	meta.opts.format = FormatCSV
+	meta.opts.delim = ','
 
 	// Set global options
 	for _, opt := range writer.opts {
@@ -97,12 +102,52 @@ func (meta columnmeta) String() string {
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC METHODS
 
+// Return underlying struct type for the data
 func (meta *tablemeta) Type() reflect.Type {
 	return meta.typ
 }
 
+// Return the number of fields or columns
 func (meta *tablemeta) NumField() int {
 	return len(meta.cols)
+}
+
+// Return the field names
+func (meta *tablemeta) Fields() []string {
+	result := make([]string, 0, len(meta.cols))
+	for _, col := range meta.cols {
+		result = append(result, col.Name)
+	}
+	return result
+}
+
+// Return the field values in the correct order. The input value should be
+// a struct
+func (meta *tablemeta) Values(v any) ([]any, error) {
+	if v == nil {
+		return nil, ErrBadParameter.With("nil value")
+	}
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Type() != meta.typ {
+		return nil, ErrBadParameter.Withf("expected %q", meta.typ)
+	}
+
+	// Create a slice of values
+	result := make([]any, len(meta.cols))
+	for i, col := range meta.cols {
+		// Get the field value
+		fv := rv.FieldByIndex(col.Index)
+		if !fv.IsValid() {
+			return nil, ErrBadParameter.With("invalid field")
+		}
+		result[i] = fv.Interface()
+	}
+
+	// Return success
+	return result, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,11 +182,9 @@ func typeOf(v any) (reflect.Type, bool, error) {
 func asColumns(rt reflect.Type, tag string) []*columnmeta {
 	cols := make([]*columnmeta, 0, rt.NumField())
 	order := 0
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-
-		// Ignore private fields
-		if f.PkgPath != "" {
+	for _, f := range reflect.VisibleFields(rt) {
+		// Ignore if anonymous field
+		if f.Anonymous {
 			continue
 		}
 
@@ -154,8 +197,6 @@ func asColumns(rt reflect.Type, tag string) []*columnmeta {
 
 		// Obtain tag information from "writer" tag
 		if tag := f.Tag.Get(tag); tag != "" {
-			tuples := strings.Split(tag, ",")
-
 			// Ignore field if tag is "-"
 			if tag == "-" {
 				continue
@@ -166,7 +207,8 @@ func asColumns(rt reflect.Type, tag string) []*columnmeta {
 			order++
 
 			// Set name if first tuple is not empty
-			if tuples[0] != "" && meta.Name == "" {
+			tuples := strings.Split(tag, ",")
+			if tuples[0] != "" {
 				meta.Name = tuples[0]
 			}
 

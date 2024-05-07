@@ -1,6 +1,8 @@
 package tablewriter
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +15,7 @@ import (
 type TableWriter struct {
 	w    io.Writer
 	opts []TableOpt
+	csv  *csv.Writer
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,14 +47,87 @@ func New(w io.Writer, opts ...TableOpt) *TableWriter {
 
 // Write will output the table to the writer object, applying any options
 func (w *TableWriter) Write(v any, opts ...TableOpt) error {
+	var result error
+
 	// Create a metadata object which creates an iterator for the data
 	meta, err := w.NewMeta(v, opts...)
 	if err != nil {
 		return err
 	}
 
-	// noop
-	fmt.Println(meta)
+	// If the format is JSON then create a JSON writer
+	if meta.opts.format == FormatCSV {
+		w.csv = csv.NewWriter(w.w)
+		w.csv.Comma = meta.opts.delim
+	}
+
+	// Create an iterator
+	iterator, err := NewIterator(v)
+	if err != nil {
+		return err
+	}
+
+	// Write rows
+	header := false
+	for row := iterator.Next(); row != nil; row = iterator.Next() {
+		if !header {
+			if meta.header {
+				if err := w.writeHeader(meta); err != nil {
+					result = errors.Join(result, err)
+					break
+				}
+			}
+			header = true
+		}
+		if values, err := meta.Values(row); err != nil {
+			result = errors.Join(result, err)
+		} else if err := w.writeRow(meta, values); err != nil {
+			result = errors.Join(result, err)
+		}
+	}
+
+	// Flush CSV
+	if w.csv != nil {
+		w.csv.Flush()
+		if err := w.csv.Error(); err != nil {
+			result = errors.Join(result, err)
+		}
+	}
+
+	// Return any errors
+	return result
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// PRIVATE METHODS
+
+func (w *TableWriter) writeHeader(meta *tablemeta) error {
+	switch {
+	case w.csv != nil:
+		if err := w.csv.Write(meta.Fields()); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unsupported format")
+	}
+
+	// Return success
+	return nil
+}
+
+func (w *TableWriter) writeRow(meta *tablemeta, values []any) error {
+	switch {
+	case w.csv != nil:
+		strs := make([]string, len(values))
+		for i, v := range values {
+			strs[i] = fmt.Sprint(v)
+		}
+		if err := w.csv.Write(strs); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unsupported format")
+	}
 
 	// Return success
 	return nil
