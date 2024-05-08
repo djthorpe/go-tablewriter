@@ -61,6 +61,14 @@ func OptOutputCSV() TableOpt {
 	}
 }
 
+// Output as Text
+func OptOutputText() TableOpt {
+	return func(o *opts) error {
+		o.format = FormatText
+		return nil
+	}
+}
+
 // Set how the nil value is represented in the output, defaults to "<nil>"
 func OptNull(v string) TableOpt {
 	return func(o *opts) error {

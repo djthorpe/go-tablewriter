@@ -5,6 +5,9 @@ import (
 	"errors"
 	"io"
 	"os"
+
+	// Packages
+	text "github.com/djthorpe/go-tablewriter/pkg/text"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -15,6 +18,7 @@ type TableWriter struct {
 	w    io.Writer
 	opts []TableOpt
 	csv  *csv.Writer
+	text *text.Writer
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,6 +27,10 @@ type TableWriter struct {
 const (
 	defaultTagName = "json"
 	defaultNull    = "<nil>"
+)
+
+var (
+	ErrUnsupportedFormat = errors.New("unsupported output format")
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,9 +64,18 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 	}
 
 	// If the format is JSON then create a JSON writer
-	if meta.opts.format == FormatCSV {
+	switch meta.opts.format {
+	case FormatCSV:
 		w.csv = csv.NewWriter(w.w)
 		w.csv.Comma = meta.opts.delim
+	case FormatText:
+		if writer, err := text.NewWriter(w.w); err != nil {
+			return err
+		} else {
+			w.text = writer
+		}
+	default:
+		return ErrUnsupportedFormat
 	}
 
 	// Create an iterator
@@ -66,6 +83,14 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 	if err != nil {
 		return err
 	}
+
+	// Check for zeroed-data columns
+	//for row := iterator.Next(); row != nil; row = iterator.Next() {
+	//	if err := meta.CheckZero(row); err != nil {
+	//		result = errors.Join(result, err)
+	//	}
+	//}
+	//iterator.Reset()
 
 	// Write rows
 	header := false
@@ -84,8 +109,9 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 		}
 	}
 
-	// Flush CSV
-	if w.csv != nil {
+	// Flush
+	switch meta.opts.format {
+	case FormatCSV:
 		w.csv.Flush()
 		if err := w.csv.Error(); err != nil {
 			result = errors.Join(result, err)
@@ -100,13 +126,15 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 // PRIVATE METHODS
 
 func (w *TableWriter) writeHeader(meta *tablemeta) error {
-	switch {
-	case w.csv != nil:
+	switch meta.opts.format {
+	case FormatCSV:
 		if err := w.csv.Write(meta.Fields()); err != nil {
 			return err
 		}
-	default:
-		return errors.New("unsupported format")
+	case FormatText:
+		if err := w.text.Write(meta.Fields()); err != nil {
+			return err
+		}
 	}
 
 	// Return success
@@ -114,15 +142,21 @@ func (w *TableWriter) writeHeader(meta *tablemeta) error {
 }
 
 func (w *TableWriter) writeRow(meta *tablemeta, row any) error {
-	switch {
-	case w.csv != nil:
+	switch meta.opts.format {
+	case FormatCSV:
 		if values, err := meta.StringValues(row); err != nil {
 			return err
 		} else if err := w.csv.Write(values); err != nil {
 			return err
 		}
+	case FormatText:
+		if values, err := meta.StringValues(row); err != nil {
+			return err
+		} else if err := w.text.Write(values); err != nil {
+			return err
+		}
 	default:
-		return errors.New("unsupported format")
+		return ErrUnsupportedFormat
 	}
 
 	// Return success
