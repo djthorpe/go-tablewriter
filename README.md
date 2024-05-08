@@ -21,7 +21,8 @@ func main() {
 }
 ```
 
-The `Write` function expects a single struct or a slice of structs as the first argument. Each struct represents a row in the table. The struct fields are used as columns in the table.
+The `Write` function expects a single struct or a slice of structs as the first argument. Each struct represents a row in the table. 
+The struct fields (including any which are embedded) are used as columns in the table.
 
 ## Table Options
 
@@ -61,6 +62,7 @@ See the [LICENSE](LICENSE) file for license rights and limitations, currently Ap
 ## Changelog
 
   * v0.0.1 (May 2024) Initial version
+  * v0.0.2 (May 2024) Documentation updates
 
 Future versions will include more options for customizing the output:
 

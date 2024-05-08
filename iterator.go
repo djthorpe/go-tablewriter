@@ -13,12 +13,24 @@ type iterator struct {
 	index int
 }
 
+// Iterator is an interface for iterating over a slice of struct values
+type Iterator interface {
+	// Return the number of elements
+	Len() int
+
+	// Return the next struct, or nil
+	Next() any
+
+	// Reset the iterator to the beginning
+	Reset()
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // CONSTRUCTOR
 
 // NewIterator returns a new slice iterator object, from a single struct
 // value or an array of one or more struct values which are of the same type
-func NewIterator(v any) (*iterator, error) {
+func NewIterator(v any) (Iterator, error) {
 	self := new(iterator)
 
 	// Get the type
