@@ -57,3 +57,21 @@ By default, strings are output as-is and other values are marshalled using the `
 ## Contribution and License
 
 See the [LICENSE](LICENSE) file for license rights and limitations, currently Apache. Pull requests and [issues](https://github.com/djthorpe/go-tablewriter/issues) are welcome.
+
+## Changelog
+
+  * v0.0.1 (May 2024) Initial version
+
+Future versions will include more options for customizing the output:
+
+tablewriter:
+
+  * Omitting columns based on zero-value
+  * Adding JSON and SQL output
+
+pkg/text:
+
+  * Sizing the width of fields for the text package
+  * Setting the width of the table based on terminal width
+  * Wrapping text in columns
+  * Outputing fields with ANSI color codes

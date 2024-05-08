@@ -1,4 +1,4 @@
-package tablewriter
+package text
 
 // TerminalOpts appends appropriate options for terminal output
 // including width of the terminal
