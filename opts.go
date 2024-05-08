@@ -22,8 +22,8 @@ type TableOpt func(*opts) error
 
 const (
 	_          format = iota // Default output format
-	FormatCSV                // Output as CSV
-	FormatText               // Output as text
+	formatCSV                // Output as CSV
+	formatText               // Output as text
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ func OptFieldDelim(delim rune) TableOpt {
 // Output as CSV
 func OptOutputCSV() TableOpt {
 	return func(o *opts) error {
-		o.format = FormatCSV
+		o.format = formatCSV
 		return nil
 	}
 }
@@ -64,7 +64,7 @@ func OptOutputCSV() TableOpt {
 // Output as Text
 func OptOutputText() TableOpt {
 	return func(o *opts) error {
-		o.format = FormatText
+		o.format = formatText
 		return nil
 	}
 }

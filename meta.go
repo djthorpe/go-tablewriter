@@ -43,7 +43,9 @@ type TableMeta interface {
 ///////////////////////////////////////////////////////////////////////////////
 // CONSTRUCTOR
 
-func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (*tablemeta, error) {
+// Create a new table metadata object from a struct value and optional
+// formatting options
+func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (TableMeta, error) {
 	meta := new(tablemeta)
 
 	// Set parameters
@@ -56,7 +58,7 @@ func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (*tablemeta, error) 
 	// Set default options
 	meta.opts.tag = defaultTagName
 	meta.opts.null = defaultNull
-	meta.opts.format = FormatCSV
+	meta.opts.format = formatCSV
 	meta.opts.delim = ','
 
 	// Set global options
