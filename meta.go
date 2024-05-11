@@ -214,6 +214,10 @@ func asColumns(rt reflect.Type, tag string) []*columnmeta {
 		if f.Anonymous {
 			continue
 		}
+		// Ignore unexported fields
+		if !f.IsExported() {
+			continue
+		}
 
 		// Set column metadata
 		meta := &columnmeta{
