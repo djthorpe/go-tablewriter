@@ -77,7 +77,12 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		w.csv = csv.NewWriter(w.w)
 		w.csv.Comma = meta.(*tablemeta).opts.delim
 	case formatText:
-		if writer, err := text.NewWriter(w.w); err != nil {
+		opts := []text.Opt{}
+		for i, fmt := range meta.(*tablemeta).Formats() {
+			// TODO: Only set a format if there is a wrap, align or width on the column meta
+			opts = append(opts, text.OptFormat(fmt, i))
+		}
+		if writer, err := text.NewWriter(w.w, opts...); err != nil {
 			return err
 		} else {
 			w.text = writer

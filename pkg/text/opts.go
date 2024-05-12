@@ -27,7 +27,8 @@ type Opt func(*opts) error
 // GLOBALS
 
 const (
-	Left Alignment = iota
+	_ Alignment = iota
+	Left
 	Right
 )
 
