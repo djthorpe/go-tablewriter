@@ -3,6 +3,7 @@ package tablewriter
 import (
 	"encoding/json"
 	"reflect"
+	"time"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -15,9 +16,8 @@ type Marshaller interface {
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC METHODS
 
-// Convert any value to a byte array. If quote is true, then the value is
-// quoted if it is a string.
-func marshal(meta *columnmeta, v any) ([]byte, error) {
+// Convert any value to a byte array
+func marshal(meta *columnmeta, v any, timeLayout string) ([]byte, error) {
 	// Check for nil
 	if v == nil || (reflect.TypeOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()) {
 		return nil, nil
@@ -30,6 +30,8 @@ func marshal(meta *columnmeta, v any) ([]byte, error) {
 	case string:
 		// By default, strings are not quoted
 		return []byte(v), nil
+	case time.Time:
+		return []byte(v.Format(timeLayout)), nil
 	default:
 		return json.Marshal(v)
 	}

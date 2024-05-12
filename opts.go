@@ -4,10 +4,11 @@ package tablewriter
 // TYPES
 
 type opts struct {
-	tag    string // Tag used to get additional struct metadata
-	delim  rune   // Delimiter used to separate fields
-	header bool   // Whether to output a header
-	null   string // How the nil value is represented in the output
+	tag        string // Tag used to get additional struct metadata
+	delim      rune   // Delimiter used to separate fields
+	header     bool   // Whether to output a header
+	null       string // How the nil value is represented in the output
+	timeLayout string // How time values are formatted in the output
 	format
 }
 
@@ -73,6 +74,14 @@ func OptOutputText() TableOpt {
 func OptNull(v string) TableOpt {
 	return func(o *opts) error {
 		o.null = v
+		return nil
+	}
+}
+
+// Set how time values are formatted in the output
+func OptTimeLayout(v string) TableOpt {
+	return func(o *opts) error {
+		o.timeLayout = v
 		return nil
 	}
 }
