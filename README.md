@@ -41,7 +41,10 @@ Tags on struct fields can determine how the field is output. The `json` tag is u
 
 - `json:"-"`: Skip the field.
 - `json:"Name"`: Set the column header to "Name".
-- `json:",omitdefault"`: If all values in the table are zero-valued, skip output of the column.
+- `json:",omitdefault"`: If all values in the table are zero-valued, skip output of the column (TODO)
+- `json:",wrap"`: Field is wrapped to the width of the column.
+- `json:",right"`: Field is right-aligned in the column.
+- `json:",width:20"`: Suggested column width is 20 characters
 
 ## Customize Field Output
 
@@ -66,11 +69,13 @@ Pull requests and [issues](https://github.com/djthorpe/go-tablewriter/issues) ar
 - v0.0.1 (May 2024) Initial version
 - v0.0.2 (May 2024) Documentation updates
 - v0.0.4 (May 2024) Added text wrapping for text output
+- v0.0.5 (May 2024) Exposing options for customizing the output in the struct tags
 
 Future versions will include more options for customizing the output:
 
 - Setting the width of the table based on terminal width
-- Sizing the width of fields for the text package
+- Estimating sizing the width of fields for the text package
 - Omitting columns based on zero-value
 - Adding JSON and SQL output
 - Outputing fields with ANSI color codes
+- Adding a separate tag for tablewriter options instead of using json

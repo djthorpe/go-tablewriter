@@ -93,12 +93,19 @@ func (w *Writer) Write(v []string) error {
 ///////////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 
-// return the format for a row
+// return the format for a row, falling back to the default as needed
 func (w *Writer) fieldFormat(i int) Format {
+	def := w.format[-1]
 	if f, ok := w.format[i]; ok {
+		if f.Align == 0 {
+			f.Align = def.Align
+		}
+		if f.Width == 0 {
+			f.Width = def.Width
+		}
 		return f
 	}
-	return w.format[-1]
+	return def
 }
 
 // format a text value to a given format and return the lines

@@ -4,7 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
+
+	// Package imports
+	text "github.com/djthorpe/go-tablewriter/pkg/text"
 
 	// Namespace imports
 	. "github.com/djthorpe/go-errors"
@@ -129,6 +133,23 @@ func (meta *tablemeta) Fields() []string {
 	return meta.strings
 }
 
+// Return the field formats
+func (meta *tablemeta) Formats() []text.Format {
+	result := make([]text.Format, len(meta.cols))
+	for i, col := range meta.cols {
+		result[i] = text.Format{
+			Wrap:  col.Bool("wrap"),
+			Width: col.Int("width"),
+		}
+		if col.Bool("right") {
+			result[i].Align = text.Right
+		} else {
+			result[i].Align = text.Left
+		}
+	}
+	return result
+}
+
 // Return the field values in the correct order. The input value should be
 // a struct
 func (meta *tablemeta) Values(v any) ([]any, error) {
@@ -176,6 +197,32 @@ func (meta *tablemeta) StringValues(v any) ([]string, error) {
 
 	// Return any errors
 	return meta.strings, result
+}
+
+// Return true if the column has the named tuple
+func (meta *columnmeta) Bool(name string) bool {
+	name = strings.ToLower(name)
+	for _, tuple := range meta.Tuples {
+		parts := strings.SplitN(tuple, ":", 2)
+		if parts[0] == name {
+			return true
+		}
+	}
+	return false
+}
+
+// Return named tuple value as an int, or zero
+func (meta *columnmeta) Int(name string) int {
+	name = strings.ToLower(name)
+	for _, tuple := range meta.Tuples {
+		parts := strings.SplitN(tuple, ":", 2)
+		if parts[0] == name && len(parts) == 2 {
+			if v, err := strconv.ParseInt(parts[1], 10, 0); err == nil {
+				return int(v)
+			}
+		}
+	}
+	return 0
 }
 
 ///////////////////////////////////////////////////////////////////////////////
