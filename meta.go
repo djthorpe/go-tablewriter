@@ -45,7 +45,7 @@ type TableMeta interface {
 
 // Create a new table metadata object from a struct value and optional
 // formatting options
-func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (TableMeta, error) {
+func (writer *Writer) NewMeta(v any, opts ...TableOpt) (TableMeta, error) {
 	meta := new(tablemeta)
 
 	// Set parameters
@@ -60,6 +60,7 @@ func (writer *TableWriter) NewMeta(v any, opts ...TableOpt) (TableMeta, error) {
 	meta.opts.null = defaultNull
 	meta.opts.format = formatCSV
 	meta.opts.delim = ','
+	meta.opts.timeLayout = defaultTimeLayout
 
 	// Set global options
 	for _, opt := range writer.opts {
@@ -164,7 +165,7 @@ func (meta *tablemeta) StringValues(v any) ([]string, error) {
 		return nil, err
 	}
 	for i, value := range values {
-		if bytes, err := marshal(meta.cols[i], value); err != nil {
+		if bytes, err := marshal(meta.cols[i], value, meta.timeLayout); err != nil {
 			result = errors.Join(result, err)
 		} else if bytes == nil {
 			meta.strings[i] = meta.opts.null

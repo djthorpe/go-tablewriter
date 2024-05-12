@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 
 	// Packages
 	text "github.com/djthorpe/go-tablewriter/pkg/text"
@@ -13,8 +14,8 @@ import (
 ///////////////////////////////////////////////////////////////////////////////
 // TYPES
 
-// A tablewriter object
-type TableWriter struct {
+// A writer object which can write table data to an io.Writer
+type Writer struct {
 	w    io.Writer
 	opts []TableOpt
 	csv  *csv.Writer
@@ -25,8 +26,9 @@ type TableWriter struct {
 // GLOBALS
 
 const (
-	defaultTagName = "json"
-	defaultNull    = "<nil>"
+	defaultTagName    = "json"
+	defaultNull       = "<nil>"
+	defaultTimeLayout = time.RFC1123
 )
 
 var (
@@ -36,9 +38,9 @@ var (
 ///////////////////////////////////////////////////////////////////////////////
 // LIFECYCLE
 
-// New creates a new table writer object, with options for all subsequent writes
-func New(w io.Writer, opts ...TableOpt) *TableWriter {
-	self := new(TableWriter)
+// New creates a new Writer object, with options for all subsequent writes
+func New(w io.Writer, opts ...TableOpt) *Writer {
+	self := new(Writer)
 	self.opts = opts
 	if w == nil {
 		self.w = os.Stdout
@@ -53,8 +55,14 @@ func New(w io.Writer, opts ...TableOpt) *TableWriter {
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC METHODS
 
-// Write will output the table to the writer object, applying any options
-func (w *TableWriter) Write(v any, opts ...TableOpt) error {
+// Output will return the underlying io.Writer object
+func (w *Writer) Output() io.Writer {
+	return w.w
+}
+
+// Write the table to output, applying any options which override to the
+// options passed to the New method
+func (w *Writer) Write(v any, opts ...TableOpt) error {
 	var result error
 
 	// Create a metadata object which creates an iterator for the data
@@ -84,7 +92,7 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 		return err
 	}
 
-	// Check for zeroed-data columns
+	// TODO: Check for zeroed-data columns
 	//for row := iterator.Next(); row != nil; row = iterator.Next() {
 	//	if err := meta.CheckZero(row); err != nil {
 	//		result = errors.Join(result, err)
@@ -125,7 +133,7 @@ func (w *TableWriter) Write(v any, opts ...TableOpt) error {
 ///////////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 
-func (w *TableWriter) writeHeader(meta *tablemeta) error {
+func (w *Writer) writeHeader(meta *tablemeta) error {
 	switch meta.opts.format {
 	case formatCSV:
 		if err := w.csv.Write(meta.Fields()); err != nil {
@@ -141,7 +149,7 @@ func (w *TableWriter) writeHeader(meta *tablemeta) error {
 	return nil
 }
 
-func (w *TableWriter) writeRow(meta *tablemeta, row any) error {
+func (w *Writer) writeRow(meta *tablemeta, row any) error {
 	switch meta.opts.format {
 	case formatCSV:
 		if values, err := meta.StringValues(row); err != nil {
