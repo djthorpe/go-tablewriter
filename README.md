@@ -29,7 +29,6 @@ The struct fields (including any which are embedded) are used as columns in the 
 The following options can be used to customize the output:
 
 - `tablewriter.OptHeader()`: Output the header row.
-- `tablewriter.OptTag("json")`: Set the struct field tag which is used to set options, default is "json".
 - `tablewriter.OptFieldDelim('|')`: Set the field delimiter, default is ',' for CSV and '|' for Text.
 - `tablewriter.OptOutputCSV()`: Output as CSV.
 - `tablewriter.OptOutputText()`: Output as Text.
@@ -37,14 +36,15 @@ The following options can be used to customize the output:
 
 ## Struct Tags
 
-Tags on struct fields can determine how the field is output. The `json` tag is used by default.
+Tags on struct fields can determine how the field is output. The `json` and `writer` tags can be used,
+with the `writer` tag options taking precedence.
 
-- `json:"-"`: Skip the field.
-- `json:"Name"`: Set the column header to "Name".
-- `json:",omitdefault"`: If all values in the table are zero-valued, skip output of the column (TODO)
-- `json:",wrap"`: Field is wrapped to the width of the column.
-- `json:",right"`: Field is right-aligned in the column.
-- `json:",width:20"`: Suggested column width is 20 characters
+- `writer:"-"`: Skip the field.
+- `writer:"Name"`: Set the column header to "Name".
+- `writer:",omitdefault"`: If all values in the table are zero-valued, skip output of the column (TODO)
+- `writer:",wrap"`: Field is wrapped to the width of the column.
+- `writer:",alignright"`: Field is right-aligned in the column.
+- `writer:",width:20"`: Suggested column width is 20 characters
 
 ## Customize Field Output
 
@@ -73,9 +73,8 @@ Pull requests and [issues](https://github.com/djthorpe/go-tablewriter/issues) ar
 
 Future versions will include more options for customizing the output:
 
-- Setting the width of the table based on terminal width
-- Estimating sizing the width of fields for the text package
 - Omitting columns based on zero-value
+- Estimating sizing the width of fields for the text package
+- Setting the width of the table based on terminal width
 - Adding JSON and SQL output
 - Outputing fields with ANSI color codes
-- Adding a separate tag for tablewriter options instead of using json
