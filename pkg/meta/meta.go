@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	// Packages
+	"github.com/djthorpe/go-tablewriter/pkg/text"
+
 	// Namespace imports
 	. "github.com/djthorpe/go-errors"
-	"github.com/djthorpe/go-tablewriter/pkg/text"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -66,7 +68,7 @@ func New(v any, tags ...string) (Struct, error) {
 	meta := new(meta)
 
 	// Set parameters
-	if rt, _, err := typeOf(v); err != nil {
+	if rt, _, err := TypeOf(v); err != nil {
 		return nil, err
 	} else {
 		meta.typ = rt
@@ -214,7 +216,7 @@ func (meta *fieldmeta) TextFormat() text.Format {
 // an array of structs or a single struct. Returns an error if the
 // type cannot be determined. If the type is a slice or array, then
 // the element type is returned, with the second argument as true.
-func typeOf(v any) (reflect.Type, bool, error) {
+func TypeOf(v any) (reflect.Type, bool, error) {
 	// Check parameters
 	if v == nil {
 		return nil, false, ErrBadParameter.With("nil value")
