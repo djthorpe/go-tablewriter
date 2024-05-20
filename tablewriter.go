@@ -8,6 +8,7 @@ import (
 	"time"
 
 	// Packages
+	meta "github.com/djthorpe/go-tablewriter/pkg/meta"
 	text "github.com/djthorpe/go-tablewriter/pkg/text"
 )
 
@@ -20,15 +21,16 @@ type Writer struct {
 	opts []TableOpt
 	csv  *csv.Writer
 	text *text.Writer
+	row  []string
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // GLOBALS
 
 const (
-	defaultTagName    = "json"
 	defaultNull       = "<nil>"
 	defaultTimeLayout = time.RFC1123
+	defaultTimeLocal  = false
 )
 
 var (
@@ -66,21 +68,33 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 	var result error
 
 	// Create a metadata object which creates an iterator for the data
-	meta, err := w.NewMeta(v, opts...)
+	meta, err := meta.New(v, "writer", "json")
 	if err != nil {
 		return err
 	}
 
-	// If the format is JSON then create a JSON writer
-	switch meta.(*tablemeta).opts.format {
+	// Options processing
+	var o options
+	o.null = defaultNull
+	o.timeLayout = defaultTimeLayout
+	o.timeLocal = defaultTimeLocal
+	for _, opt := range append(w.opts, opts...) {
+		if err := opt(&o); err != nil {
+			return err
+		}
+	}
+
+	// Create the writer object based on the format required
+	switch o.format {
 	case formatCSV:
 		w.csv = csv.NewWriter(w.w)
-		w.csv.Comma = meta.(*tablemeta).opts.delim
+		w.csv.Comma = o.delim
 	case formatText:
 		opts := []text.Opt{}
-		for i, fmt := range meta.(*tablemeta).Formats() {
-			// TODO: Only set a format if there is a wrap, align or width on the column meta
-			opts = append(opts, text.OptFormat(fmt, i))
+		for i, field := range meta.Fields() {
+			if fmt := field.TextFormat(); fmt.Width > 0 || fmt.Align != 0 || fmt.Wrap {
+				opts = append(opts, text.OptFormat(field.TextFormat(), i))
+			}
 		}
 		if writer, err := text.NewWriter(w.w, opts...); err != nil {
 			return err
@@ -109,21 +123,21 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 	header := false
 	for row := iterator.Next(); row != nil; row = iterator.Next() {
 		if !header {
-			if meta.(*tablemeta).header {
-				if err := w.writeHeader(meta.(*tablemeta)); err != nil {
+			if o.header {
+				if err := w.writeHeader(o.format, meta); err != nil {
 					result = errors.Join(result, err)
 					break
 				}
 			}
 			header = true
 		}
-		if err := w.writeRow(meta.(*tablemeta), row); err != nil {
+		if err := w.writeRow(&o, meta, row); err != nil {
 			result = errors.Join(result, err)
 		}
 	}
 
 	// Flush
-	switch meta.(*tablemeta).opts.format {
+	switch o.format {
 	case formatCSV:
 		w.csv.Flush()
 		if err := w.csv.Error(); err != nil {
@@ -138,14 +152,15 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 ///////////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 
-func (w *Writer) writeHeader(meta *tablemeta) error {
-	switch meta.opts.format {
+func (w *Writer) writeHeader(f format, meta meta.Struct) error {
+	names := meta.Fields()
+	switch f {
 	case formatCSV:
-		if err := w.csv.Write(meta.Fields()); err != nil {
+		if err := w.csv.Write(names); err != nil {
 			return err
 		}
 	case formatText:
-		if err := w.text.Write(meta.Fields()); err != nil {
+		if err := w.text.Write(names); err != nil {
 			return err
 		}
 	}
@@ -154,18 +169,38 @@ func (w *Writer) writeHeader(meta *tablemeta) error {
 	return nil
 }
 
-func (w *Writer) writeRow(meta *tablemeta, row any) error {
-	switch meta.opts.format {
+func (w *Writer) writeRow(o *options, meta meta.Struct, row any) error {
+	values, err := meta.Values(row)
+	if err != nil {
+		return err
+	}
+
+	// Convert values to []string
+	if len(w.row) != len(values) {
+		w.row = make([]string, len(values))
+	}
+
+	// Marshal values
+	var result error
+	for i, v := range values {
+		if cell, err := marshal(v, o.timeLayout, o.timeLocal); err != nil {
+			result = errors.Join(result, err)
+		} else {
+			w.row[i] = string(cell)
+		}
+	}
+	if result != nil {
+		return result
+	}
+
+	// Write row
+	switch o.format {
 	case formatCSV:
-		if values, err := meta.StringValues(row); err != nil {
-			return err
-		} else if err := w.csv.Write(values); err != nil {
+		if err := w.csv.Write(w.row); err != nil {
 			return err
 		}
 	case formatText:
-		if values, err := meta.StringValues(row); err != nil {
-			return err
-		} else if err := w.text.Write(values); err != nil {
+		if err := w.text.Write(w.row); err != nil {
 			return err
 		}
 	}
