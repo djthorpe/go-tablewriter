@@ -3,12 +3,12 @@ package meta
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
-
-	// Package imports
 
 	// Namespace imports
 	. "github.com/djthorpe/go-errors"
+	"github.com/djthorpe/go-tablewriter/pkg/text"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,9 @@ type StructField interface {
 
 	// Return tuple value
 	Tuple(name string) string
+
+	// Return text format
+	TextFormat() text.Format
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +118,7 @@ func (meta *meta) NumField() int {
 	return len(meta.fields)
 }
 
-// Return the field names
+// Return the fields
 func (meta *meta) Fields() []StructField {
 	result := make([]StructField, len(meta.fields))
 	for i, f := range meta.fields {
@@ -186,6 +189,22 @@ func (meta *fieldmeta) Is(name string) bool {
 		}
 	}
 	return false
+}
+
+// Return text format
+func (meta *fieldmeta) TextFormat() text.Format {
+	a := text.Alignment(0)
+	if meta.Is("alignleft") {
+		a = text.Left
+	} else if meta.Is("alignright") {
+		a = text.Right
+	}
+	w, _ := strconv.ParseInt(meta.Tuple("width"), 10, 16)
+	return text.Format{
+		Width: int(w),
+		Align: a,
+		Wrap:  meta.Is("wrap"),
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
