@@ -3,11 +3,7 @@ package meta
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
-
-	// Packages
-	"github.com/djthorpe/go-tablewriter/pkg/text"
 
 	// Namespace imports
 	. "github.com/djthorpe/go-errors"
@@ -17,8 +13,8 @@ import (
 // TYPES
 
 type meta struct {
-	fields []*fieldmeta // The fields of the struct
 	typ    reflect.Type // The underlying type
+	fields []*fieldmeta // The fields of the struct
 	values []any        // The values of the struct
 }
 
@@ -37,13 +33,13 @@ type Struct interface {
 	Type() reflect.Type
 
 	// Return field metadata
-	Fields() []StructField
+	Fields() []Field
 
 	// Return the field values in the correct order
 	Values(v any) ([]any, error)
 }
 
-type StructField interface {
+type Field interface {
 	// Return the field name
 	Name() string
 
@@ -61,9 +57,6 @@ type StructField interface {
 
 	// Set omit flag
 	SetOmit(bool)
-
-	// Return text format
-	TextFormat() text.Format
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -134,8 +127,8 @@ func (meta *meta) NumField() int {
 }
 
 // Return the fields
-func (meta *meta) Fields() []StructField {
-	result := make([]StructField, 0, len(meta.fields))
+func (meta *meta) Fields() []Field {
+	result := make([]Field, 0, len(meta.fields))
 	for _, f := range meta.fields {
 		if !f.omit {
 			result = append(result, f)
@@ -158,17 +151,22 @@ func (meta *meta) Values(v any) ([]any, error) {
 		return nil, ErrBadParameter.Withf("expected type %q", meta.typ)
 	}
 
-	// Create a slice of values
-	for i, col := range meta.fields {
-		fv := rv.FieldByIndex(col.index)
+	// Create a  slice of values
+	i := 0
+	for _, f := range meta.fields {
+		if f.omit {
+			continue
+		}
+		fv := rv.FieldByIndex(f.index)
 		if !fv.IsValid() {
-			return nil, ErrBadParameter.Withf("invalid field %q", col.key)
+			return nil, ErrBadParameter.Withf("invalid field %q", f.key)
 		}
 		meta.values[i] = fv.Interface()
+		i++
 	}
 
 	// Return success
-	return meta.values, nil
+	return meta.values[:i], nil
 }
 
 // Return a tag value for a field
@@ -216,22 +214,6 @@ func (meta *fieldmeta) Is(name string) bool {
 		}
 	}
 	return false
-}
-
-// Return text format
-func (meta *fieldmeta) TextFormat() text.Format {
-	a := text.Alignment(0)
-	if meta.Is("alignleft") {
-		a = text.Left
-	} else if meta.Is("alignright") {
-		a = text.Right
-	}
-	w, _ := strconv.ParseInt(meta.Tuple("width"), 10, 16)
-	return text.Format{
-		Width: int(w),
-		Align: a,
-		Wrap:  meta.Is("wrap"),
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -297,11 +279,6 @@ FOR_LOOP:
 				// Add tuples to list of tuples
 				meta.tuples = append(meta.tuples, tuples[1:]...)
 			}
-		}
-
-		// If 'omitempty' tag is set, then set omit to true
-		if meta.Is("omitempty") {
-			meta.omit = true
 		}
 
 		// Append column

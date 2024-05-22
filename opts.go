@@ -1,5 +1,15 @@
 package tablewriter
 
+import (
+	"io"
+
+	// Packages
+	"github.com/djthorpe/go-tablewriter/pkg/terminal"
+
+	// Namespace imports
+	. "github.com/djthorpe/go-errors"
+)
+
 ///////////////////////////////////////////////////////////////////////////////
 // TYPES
 
@@ -9,6 +19,7 @@ type options struct {
 	null       string // How the nil value is represented in the output
 	timeLayout string // How time values are formatted in the output
 	timeLocal  bool   // Whether time values should be printed in local time
+	width      int    // Suggested width of the table, including delimiters
 	format
 }
 
@@ -34,6 +45,29 @@ const (
 func OptHeader() TableOpt {
 	return func(o *options) error {
 		o.header = true
+		return nil
+	}
+}
+
+// Set the suggested width of the table, including delimiters from the terminal width
+// if the terminal width is not available, the width is ignored
+func OptTerminalWidth(w io.Writer) TableOpt {
+	return func(o *options) error {
+		if terminal.IsTerminal(w) {
+			o.width = terminal.Width(w)
+		}
+		return nil
+	}
+}
+
+// Set the suggested width of the table, including delimiters
+func OptTableWidth(v int) TableOpt {
+	return func(o *options) error {
+		if v > 0 {
+			o.width = v
+		} else {
+			return ErrBadParameter.With("OptTableWidth")
+		}
 		return nil
 	}
 }

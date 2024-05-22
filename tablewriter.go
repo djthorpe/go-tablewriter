@@ -3,9 +3,11 @@ package tablewriter
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
+	"strconv"
 	"time"
 
 	// Packages
@@ -103,9 +105,12 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 			text.OptDelim(o.delim),
 		}
 		for i, field := range meta.Fields() {
-			if fmt := field.TextFormat(); fmt.Width > 0 || fmt.Align != 0 || fmt.Wrap {
-				opts = append(opts, text.OptFormat(field.TextFormat(), i))
+			if textFormat := textFormat(field); textFormat.Width > 0 || textFormat.Align != 0 || textFormat.Wrap {
+				opts = append(opts, text.OptFormat(textFormat, i))
 			}
+		}
+		if o.width > 0 {
+			fmt.Println("TODO: Set width", o.width)
 		}
 		if writer, err := text.NewWriter(w.w, opts...); err != nil {
 			return err
@@ -118,21 +123,31 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 
 	// Check for zeroed-data columns
 	fields := meta.Fields()
+	notomit := make([]bool, len(fields))
 	for row := iterator.Next(); row != nil; row = iterator.Next() {
 		values, err := meta.Values(row)
 		if err != nil {
 			return err
 		}
 		for i, value := range values {
-			if !fields[i].Omit() {
+			if notomit[i] {
 				continue
 			}
-			if value == nil || reflect.ValueOf(value).IsZero() {
-				fields[i].SetOmit()
+			if value == nil {
+				continue
 			}
+			if reflect.ValueOf(value).IsZero() {
+				continue
+			}
+			notomit[i] = true
 		}
 	}
 	iterator.Reset()
+
+	// Set omit flags
+	for i, field := range fields {
+		field.SetOmit(!notomit[i])
+	}
 
 	// Write rows
 	header := false
@@ -166,6 +181,31 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 
 ///////////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
+
+func textFormat(field meta.Field) text.Format {
+	var result text.Format
+
+	// Wrap
+	if field.Is("wrap") {
+		result.Wrap = true
+	}
+
+	// Alignment
+	switch {
+	case field.Is("left"):
+		result.Align = text.Left
+	case field.Is("right"):
+		result.Align = text.Right
+	}
+
+	// Width
+	if field.Is("width") {
+		if w, err := strconv.ParseInt(field.Tuple("width"), 10, 16); err == nil {
+			result.Width = int(w)
+		}
+	}
+	return result
+}
 
 func (w *Writer) writeHeader(f format, meta meta.Struct) error {
 	fields := meta.Fields()
