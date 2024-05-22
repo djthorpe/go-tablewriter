@@ -38,18 +38,20 @@ func OptHeader() TableOpt {
 	}
 }
 
-// Set the field delimiter, default is ',' for CSV and '|' for Text
-func OptFieldDelim(delim rune) TableOpt {
-	return func(o *options) error {
-		o.delim = delim
-		return nil
-	}
-}
-
 // Output as CSV
 func OptOutputCSV() TableOpt {
 	return func(o *options) error {
 		o.format = formatCSV
+		o.delim = ','
+		return nil
+	}
+}
+
+// Output as TSV
+func OptOutputTSV() TableOpt {
+	return func(o *options) error {
+		o.format = formatCSV
+		o.delim = '\t'
 		return nil
 	}
 }
@@ -58,6 +60,7 @@ func OptOutputCSV() TableOpt {
 func OptOutputText() TableOpt {
 	return func(o *options) error {
 		o.format = formatText
+		o.delim = '|'
 		return nil
 	}
 }
@@ -70,10 +73,19 @@ func OptNull(v string) TableOpt {
 	}
 }
 
+// Set the delimiter between fields, if not set with OptOutput...
+func OptDelimiter(v rune) TableOpt {
+	return func(o *options) error {
+		o.delim = v
+		return nil
+	}
+}
+
 // Set how time values are formatted in the output
-func OptTimeLayout(v string) TableOpt {
+func OptTimeLayout(v string, local bool) TableOpt {
 	return func(o *options) error {
 		o.timeLayout = v
+		o.timeLocal = local
 		return nil
 	}
 }

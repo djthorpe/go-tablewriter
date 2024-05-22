@@ -1,10 +1,8 @@
-package tablewriter
+package meta
 
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/djthorpe/go-tablewriter/pkg/meta"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,7 +34,7 @@ func NewIterator(v any) (Iterator, error) {
 	self := new(iterator)
 
 	// Get the type
-	rt, isSlice, err := meta.TypeOf(v)
+	rt, isSlice, err := typeOf(v)
 	if err != nil {
 		return nil, err
 	}

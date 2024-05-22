@@ -28,6 +28,7 @@ type fieldmeta struct {
 	name   string   // the output field name
 	index  []int    // the index of the field
 	tuples []string // tuples from the tags
+	omit   bool     // field output should be omitted
 }
 
 // Struct metadata interface
@@ -55,6 +56,12 @@ type StructField interface {
 	// Return tuple value
 	Tuple(name string) string
 
+	// Return omit flag
+	Omit() bool
+
+	// Set omit flag
+	SetOmit(bool)
+
 	// Return text format
 	TextFormat() text.Format
 }
@@ -68,7 +75,7 @@ func New(v any, tags ...string) (Struct, error) {
 	meta := new(meta)
 
 	// Set parameters
-	if rt, _, err := TypeOf(v); err != nil {
+	if rt, _, err := typeOf(v); err != nil {
 		return nil, err
 	} else {
 		meta.typ = rt
@@ -115,16 +122,24 @@ func (meta *meta) Type() reflect.Type {
 	return meta.typ
 }
 
-// Return the number of fields
+// Return the number of fields which are not omitted
 func (meta *meta) NumField() int {
-	return len(meta.fields)
+	c := 0
+	for _, f := range meta.fields {
+		if !f.omit {
+			c++
+		}
+	}
+	return c
 }
 
 // Return the fields
 func (meta *meta) Fields() []StructField {
-	result := make([]StructField, len(meta.fields))
-	for i, f := range meta.fields {
-		result[i] = f
+	result := make([]StructField, 0, len(meta.fields))
+	for _, f := range meta.fields {
+		if !f.omit {
+			result = append(result, f)
+		}
 	}
 	return result
 }
@@ -162,6 +177,16 @@ func (meta *fieldmeta) Name() string {
 		return meta.name
 	}
 	return meta.key
+}
+
+// Return the omit flag
+func (meta *fieldmeta) Omit() bool {
+	return meta.omit
+}
+
+// Set the omit flag
+func (meta *fieldmeta) SetOmit(v bool) {
+	meta.omit = v
 }
 
 // Return a tag value for a field
@@ -216,7 +241,7 @@ func (meta *fieldmeta) TextFormat() text.Format {
 // an array of structs or a single struct. Returns an error if the
 // type cannot be determined. If the type is a slice or array, then
 // the element type is returned, with the second argument as true.
-func TypeOf(v any) (reflect.Type, bool, error) {
+func typeOf(v any) (reflect.Type, bool, error) {
 	// Check parameters
 	if v == nil {
 		return nil, false, ErrBadParameter.With("nil value")
@@ -248,7 +273,7 @@ FOR_LOOP:
 			continue
 		}
 
-		// Set column metadata
+		// Set column metadata, default each column to be omitted
 		meta := &fieldmeta{
 			field: f,
 			key:   f.Name,
@@ -272,6 +297,11 @@ FOR_LOOP:
 				// Add tuples to list of tuples
 				meta.tuples = append(meta.tuples, tuples[1:]...)
 			}
+		}
+
+		// If 'omitempty' tag is set, then set omit to true
+		if meta.Is("omitempty") {
+			meta.omit = true
 		}
 
 		// Append column

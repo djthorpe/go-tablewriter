@@ -1,9 +1,10 @@
-package tablewriter_test
+package meta_test
 
 import (
 	"testing"
 
-	"github.com/djthorpe/go-tablewriter"
+	// Packages
+	meta "github.com/djthorpe/go-tablewriter/pkg/meta"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +13,7 @@ import (
 
 func Test_iterator_000(t *testing.T) {
 	assert := assert.New(t)
-	iterator, err := tablewriter.NewIterator(TestAB{})
+	iterator, err := meta.NewIterator(TestAB{})
 	assert.NoError(err)
 	assert.NotNil(iterator)
 	assert.Equal(1, iterator.Len())
@@ -21,7 +22,7 @@ func Test_iterator_000(t *testing.T) {
 
 func Test_iterator_001(t *testing.T) {
 	assert := assert.New(t)
-	iterator, err := tablewriter.NewIterator([]TestAB{})
+	iterator, err := meta.NewIterator([]TestAB{})
 	assert.NoError(err)
 	assert.NotNil(iterator)
 	assert.Equal(0, iterator.Len())
@@ -29,7 +30,7 @@ func Test_iterator_001(t *testing.T) {
 
 func Test_iterator_002(t *testing.T) {
 	assert := assert.New(t)
-	iterator, err := tablewriter.NewIterator([]TestAB{{}, {}, {}})
+	iterator, err := meta.NewIterator([]TestAB{{}, {}, {}})
 	assert.NoError(err)
 	assert.NotNil(iterator)
 	assert.Equal(3, iterator.Len())
@@ -37,7 +38,7 @@ func Test_iterator_002(t *testing.T) {
 
 func Test_iterator_003(t *testing.T) {
 	assert := assert.New(t)
-	iterator, err := tablewriter.NewIterator([]TestAB{{A: "1"}, {A: "2"}, {A: "3"}})
+	iterator, err := meta.NewIterator([]TestAB{{A: "1"}, {A: "2"}, {A: "3"}})
 	assert.NoError(err)
 	assert.NotNil(iterator)
 	assert.Equal(3, iterator.Len())

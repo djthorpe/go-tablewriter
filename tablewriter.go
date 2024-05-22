@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"reflect"
 	"time"
 
 	// Packages
@@ -67,6 +68,12 @@ func (w *Writer) Output() io.Writer {
 func (w *Writer) Write(v any, opts ...TableOpt) error {
 	var result error
 
+	// Create an iterator
+	iterator, err := meta.NewIterator(v)
+	if err != nil {
+		return err
+	}
+
 	// Create a metadata object which creates an iterator for the data
 	meta, err := meta.New(v, "writer", "json")
 	if err != nil {
@@ -75,6 +82,8 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 
 	// Options processing
 	var o options
+	o.format = formatCSV
+	o.delim = ','
 	o.null = defaultNull
 	o.timeLayout = defaultTimeLayout
 	o.timeLocal = defaultTimeLocal
@@ -90,7 +99,9 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		w.csv = csv.NewWriter(w.w)
 		w.csv.Comma = o.delim
 	case formatText:
-		opts := []text.Opt{}
+		opts := []text.Opt{
+			text.OptDelim(o.delim),
+		}
 		for i, field := range meta.Fields() {
 			if fmt := field.TextFormat(); fmt.Width > 0 || fmt.Align != 0 || fmt.Wrap {
 				opts = append(opts, text.OptFormat(field.TextFormat(), i))
@@ -105,19 +116,23 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		return errUnsupportedFormat
 	}
 
-	// Create an iterator
-	iterator, err := NewIterator(v)
-	if err != nil {
-		return err
+	// Check for zeroed-data columns
+	fields := meta.Fields()
+	for row := iterator.Next(); row != nil; row = iterator.Next() {
+		values, err := meta.Values(row)
+		if err != nil {
+			return err
+		}
+		for i, value := range values {
+			if !fields[i].Omit() {
+				continue
+			}
+			if value == nil || reflect.ValueOf(value).IsZero() {
+				fields[i].SetOmit()
+			}
+		}
 	}
-
-	// TODO: Check for zeroed-data columns
-	//for row := iterator.Next(); row != nil; row = iterator.Next() {
-	//	if err := meta.CheckZero(row); err != nil {
-	//		result = errors.Join(result, err)
-	//	}
-	//}
-	//iterator.Reset()
+	iterator.Reset()
 
 	// Write rows
 	header := false
@@ -153,14 +168,20 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 // PRIVATE METHODS
 
 func (w *Writer) writeHeader(f format, meta meta.Struct) error {
-	names := meta.Fields()
+	fields := meta.Fields()
+	w.row = make([]string, len(fields))
+	for i, field := range fields {
+		w.row[i] = field.Name()
+	}
+
+	// Write header row
 	switch f {
 	case formatCSV:
-		if err := w.csv.Write(names); err != nil {
+		if err := w.csv.Write(w.row); err != nil {
 			return err
 		}
 	case formatText:
-		if err := w.text.Write(names); err != nil {
+		if err := w.text.Write(w.row); err != nil {
 			return err
 		}
 	}
@@ -185,6 +206,8 @@ func (w *Writer) writeRow(o *options, meta meta.Struct, row any) error {
 	for i, v := range values {
 		if cell, err := marshal(v, o.timeLayout, o.timeLocal); err != nil {
 			result = errors.Join(result, err)
+		} else if cell == nil {
+			w.row[i] = o.null
 		} else {
 			w.row[i] = string(cell)
 		}

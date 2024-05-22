@@ -2,7 +2,6 @@ package tablewriter_test
 
 import (
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -39,39 +38,6 @@ func Test_tablewriter_001(t *testing.T) {
 	assert.NoError(err)
 }
 
-func Test_tablewriter_002(t *testing.T) {
-	assert := assert.New(t)
-	writer := tablewriter.New(os.Stdout)
-	meta, err := writer.NewMeta(TestAB{})
-	assert.NoError(err)
-	assert.NotNil(meta)
-	assert.Equal(reflect.TypeOf(TestAB{}), meta.Type())
-}
-
-func Test_tablewriter_003(t *testing.T) {
-	assert := assert.New(t)
-	writer := tablewriter.New(os.Stdout)
-	meta, err := writer.NewMeta([]TestAB{})
-	assert.NoError(err)
-	assert.NotNil(meta)
-	assert.Equal(reflect.TypeOf(TestAB{}), meta.Type())
-	assert.Equal(2, meta.NumField()) // A and B
-	assert.Equal([]string{"a", "b"}, meta.Fields())
-	t.Log(meta)
-}
-
-func Test_tablewriter_004(t *testing.T) {
-	assert := assert.New(t)
-	writer := tablewriter.New(os.Stdout)
-	meta, err := writer.NewMeta([]TestABEF{})
-	assert.NoError(err)
-	assert.NotNil(meta)
-	assert.Equal(reflect.TypeOf(TestABEF{}), meta.Type())
-	assert.Equal(4, meta.NumField()) // A,B,E,F
-	assert.Equal([]string{"a", "b", "E", "F"}, meta.Fields())
-	t.Log(meta)
-}
-
 func Test_tablewriter_005(t *testing.T) {
 	assert := assert.New(t)
 	buf := new(strings.Builder)
@@ -79,7 +45,7 @@ func Test_tablewriter_005(t *testing.T) {
 	table := []TestAB{
 		{A: "hello", B: "world"},
 	}
-	err := writer.Write(table)
+	err := writer.Write(table, tablewriter.OptOutputCSV())
 	assert.NoError(err)
 	assert.Equal("hello,world\n", buf.String())
 }
@@ -87,11 +53,11 @@ func Test_tablewriter_005(t *testing.T) {
 func Test_tablewriter_006(t *testing.T) {
 	assert := assert.New(t)
 	buf := new(strings.Builder)
-	writer := tablewriter.New(buf, tablewriter.OptFieldDelim('|'))
+	writer := tablewriter.New(buf, tablewriter.OptOutputCSV())
 	table := []TestAB{
 		{A: "hello", B: "world"},
 	}
-	err := writer.Write(table)
+	err := writer.Write(table, tablewriter.OptDelimiter('|'))
 	assert.NoError(err)
 	assert.Equal("hello|world\n", buf.String())
 }
