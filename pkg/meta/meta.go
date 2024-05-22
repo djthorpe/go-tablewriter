@@ -27,7 +27,7 @@ type fieldmeta struct {
 	omit   bool     // field output should be omitted
 }
 
-// Struct metadata interface
+// The struct metadata
 type Struct interface {
 	// Return the underlying type
 	Type() reflect.Type
@@ -39,9 +39,13 @@ type Struct interface {
 	Values(v any) ([]any, error)
 }
 
+// The field metadata
 type Field interface {
 	// Return the field name
 	Name() string
+
+	// Return the underlying type (dereferencing pointers)
+	Type() reflect.Type
 
 	// Whether the field has a tag ie, Is("omitempty")
 	Is(name string) bool
@@ -175,6 +179,15 @@ func (meta *fieldmeta) Name() string {
 		return meta.name
 	}
 	return meta.key
+}
+
+// Return the type of field (dereferencing pointers)
+func (meta *fieldmeta) Type() reflect.Type {
+	result := meta.field.Type
+	if result.Kind() == reflect.Ptr {
+		result = result.Elem()
+	}
+	return result
 }
 
 // Return the omit flag
