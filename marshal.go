@@ -40,6 +40,10 @@ func marshal(v any, timeLayout string, timeLocal bool) ([]byte, error) {
 		}
 		return []byte(v.Format(timeLayout)), nil
 	default:
-		return json.Marshal(v)
+		if reflect.ValueOf(v).IsNil() {
+			return nil, nil
+		} else {
+			return json.Marshal(v)
+		}
 	}
 }
