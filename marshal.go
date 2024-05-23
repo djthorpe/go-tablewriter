@@ -17,7 +17,7 @@ type Marshaller interface {
 // PRIVATE METHODS
 
 // Convert any value to a byte array
-func marshal(v any, timeLayout string, timeLocal bool) ([]byte, error) {
+func marshal(v any, unixTime bool, timeLayout string, timeLocal bool) ([]byte, error) {
 	// Check for nil
 	if v == nil || (reflect.TypeOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil()) {
 		return nil, nil
@@ -39,13 +39,18 @@ func marshal(v any, timeLayout string, timeLocal bool) ([]byte, error) {
 			v = v.Local()
 		}
 		return []byte(v.Format(timeLayout)), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		if unixTime {
+			return marshal(time.Unix(reflect.ValueOf(v).Int(), 0), unixTime, timeLayout, timeLocal)
+		}
 	default:
 		if isNil(v) {
 			return nil, nil
-		} else {
-			return json.Marshal(v)
 		}
 	}
+
+	// Default option
+	return json.Marshal(v)
 }
 
 // isNil returns true if a value is nil (for pointers, slices and maps)
