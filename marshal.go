@@ -40,10 +40,24 @@ func marshal(v any, timeLayout string, timeLocal bool) ([]byte, error) {
 		}
 		return []byte(v.Format(timeLayout)), nil
 	default:
-		if rv := reflect.ValueOf(v); rv.Kind() != reflect.Struct && rv.IsNil() {
+		if isNil(v) {
 			return nil, nil
 		} else {
 			return json.Marshal(v)
 		}
+	}
+}
+
+// isNil returns true if a value is nil (for pointers, slices and maps)
+func isNil(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map:
+		return rv.IsNil()
+	default:
+		return false
 	}
 }
