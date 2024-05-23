@@ -3,20 +3,18 @@ package meta
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 
 	// Namespace imports
 	. "github.com/djthorpe/go-errors"
-	"github.com/djthorpe/go-tablewriter/pkg/text"
 )
 
 ///////////////////////////////////////////////////////////////////////////////
 // TYPES
 
 type meta struct {
-	fields []*fieldmeta // The fields of the struct
 	typ    reflect.Type // The underlying type
+	fields []*fieldmeta // The fields of the struct
 	values []any        // The values of the struct
 }
 
@@ -26,23 +24,28 @@ type fieldmeta struct {
 	name   string   // the output field name
 	index  []int    // the index of the field
 	tuples []string // tuples from the tags
+	omit   bool     // field output should be omitted
 }
 
-// Struct metadata interface
+// The struct metadata
 type Struct interface {
 	// Return the underlying type
 	Type() reflect.Type
 
 	// Return field metadata
-	Fields() []StructField
+	Fields() []Field
 
 	// Return the field values in the correct order
 	Values(v any) ([]any, error)
 }
 
-type StructField interface {
+// The field metadata
+type Field interface {
 	// Return the field name
 	Name() string
+
+	// Return the underlying type (dereferencing pointers)
+	Type() reflect.Type
 
 	// Whether the field has a tag ie, Is("omitempty")
 	Is(name string) bool
@@ -53,8 +56,11 @@ type StructField interface {
 	// Return tuple value
 	Tuple(name string) string
 
-	// Return text format
-	TextFormat() text.Format
+	// Return omit flag
+	Omit() bool
+
+	// Set omit flag
+	SetOmit(bool)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -113,16 +119,24 @@ func (meta *meta) Type() reflect.Type {
 	return meta.typ
 }
 
-// Return the number of fields
+// Return the number of fields which are not omitted
 func (meta *meta) NumField() int {
-	return len(meta.fields)
+	c := 0
+	for _, f := range meta.fields {
+		if !f.omit {
+			c++
+		}
+	}
+	return c
 }
 
 // Return the fields
-func (meta *meta) Fields() []StructField {
-	result := make([]StructField, len(meta.fields))
-	for i, f := range meta.fields {
-		result[i] = f
+func (meta *meta) Fields() []Field {
+	result := make([]Field, 0, len(meta.fields))
+	for _, f := range meta.fields {
+		if !f.omit {
+			result = append(result, f)
+		}
 	}
 	return result
 }
@@ -141,17 +155,22 @@ func (meta *meta) Values(v any) ([]any, error) {
 		return nil, ErrBadParameter.Withf("expected type %q", meta.typ)
 	}
 
-	// Create a slice of values
-	for i, col := range meta.fields {
-		fv := rv.FieldByIndex(col.index)
+	// Create a  slice of values
+	i := 0
+	for _, f := range meta.fields {
+		if f.omit {
+			continue
+		}
+		fv := rv.FieldByIndex(f.index)
 		if !fv.IsValid() {
-			return nil, ErrBadParameter.Withf("invalid field %q", col.key)
+			return nil, ErrBadParameter.Withf("invalid field %q", f.key)
 		}
 		meta.values[i] = fv.Interface()
+		i++
 	}
 
 	// Return success
-	return meta.values, nil
+	return meta.values[:i], nil
 }
 
 // Return a tag value for a field
@@ -160,6 +179,25 @@ func (meta *fieldmeta) Name() string {
 		return meta.name
 	}
 	return meta.key
+}
+
+// Return the type of field (dereferencing pointers)
+func (meta *fieldmeta) Type() reflect.Type {
+	result := meta.field.Type
+	if result.Kind() == reflect.Ptr {
+		result = result.Elem()
+	}
+	return result
+}
+
+// Return the omit flag
+func (meta *fieldmeta) Omit() bool {
+	return meta.omit
+}
+
+// Set the omit flag
+func (meta *fieldmeta) SetOmit(v bool) {
+	meta.omit = v
 }
 
 // Return a tag value for a field
@@ -189,22 +227,6 @@ func (meta *fieldmeta) Is(name string) bool {
 		}
 	}
 	return false
-}
-
-// Return text format
-func (meta *fieldmeta) TextFormat() text.Format {
-	a := text.Alignment(0)
-	if meta.Is("alignleft") {
-		a = text.Left
-	} else if meta.Is("alignright") {
-		a = text.Right
-	}
-	w, _ := strconv.ParseInt(meta.Tuple("width"), 10, 16)
-	return text.Format{
-		Width: int(w),
-		Align: a,
-		Wrap:  meta.Is("wrap"),
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -246,7 +268,7 @@ FOR_LOOP:
 			continue
 		}
 
-		// Set column metadata
+		// Set column metadata, default each column to be omitted
 		meta := &fieldmeta{
 			field: f,
 			key:   f.Name,

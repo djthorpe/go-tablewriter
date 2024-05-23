@@ -1,5 +1,15 @@
 package tablewriter
 
+import (
+	"io"
+
+	// Packages
+	"github.com/djthorpe/go-tablewriter/pkg/terminal"
+
+	// Namespace imports
+	. "github.com/djthorpe/go-errors"
+)
+
 ///////////////////////////////////////////////////////////////////////////////
 // TYPES
 
@@ -9,6 +19,7 @@ type options struct {
 	null       string // How the nil value is represented in the output
 	timeLayout string // How time values are formatted in the output
 	timeLocal  bool   // Whether time values should be printed in local time
+	width      int    // Suggested width of the table, including delimiters
 	format
 }
 
@@ -38,10 +49,25 @@ func OptHeader() TableOpt {
 	}
 }
 
-// Set the field delimiter, default is ',' for CSV and '|' for Text
-func OptFieldDelim(delim rune) TableOpt {
+// Set the suggested width of the table, including delimiters from the terminal width
+// if the terminal width is not available, the width is ignored
+func OptTerminalWidth(w io.Writer) TableOpt {
 	return func(o *options) error {
-		o.delim = delim
+		if terminal.IsTerminal(w) {
+			o.width = terminal.Width(w)
+		}
+		return nil
+	}
+}
+
+// Set the suggested width of the table, including delimiters
+func OptTableWidth(v int) TableOpt {
+	return func(o *options) error {
+		if v > 0 {
+			o.width = v
+		} else {
+			return ErrBadParameter.With("OptTableWidth")
+		}
 		return nil
 	}
 }
@@ -50,6 +76,16 @@ func OptFieldDelim(delim rune) TableOpt {
 func OptOutputCSV() TableOpt {
 	return func(o *options) error {
 		o.format = formatCSV
+		o.delim = ','
+		return nil
+	}
+}
+
+// Output as TSV
+func OptOutputTSV() TableOpt {
+	return func(o *options) error {
+		o.format = formatCSV
+		o.delim = '\t'
 		return nil
 	}
 }
@@ -58,6 +94,7 @@ func OptOutputCSV() TableOpt {
 func OptOutputText() TableOpt {
 	return func(o *options) error {
 		o.format = formatText
+		o.delim = '|'
 		return nil
 	}
 }
@@ -70,10 +107,19 @@ func OptNull(v string) TableOpt {
 	}
 }
 
+// Set the delimiter between fields, if not set with OptOutput...
+func OptDelimiter(v rune) TableOpt {
+	return func(o *options) error {
+		o.delim = v
+		return nil
+	}
+}
+
 // Set how time values are formatted in the output
-func OptTimeLayout(v string) TableOpt {
+func OptTimeLayout(v string, local bool) TableOpt {
 	return func(o *options) error {
 		o.timeLayout = v
+		o.timeLocal = local
 		return nil
 	}
 }
