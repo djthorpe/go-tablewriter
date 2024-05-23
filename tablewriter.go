@@ -121,7 +121,9 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		return errUnsupportedFormat
 	}
 
-	// Check for zeroed-data columns
+	// Check for zeroed-data columns - initalize the "notomit"
+	// slice to false, and then iterate over the rows to see if
+	// any columns are not zeroed, flagging them as "notomit"
 	fields := meta.Fields()
 	notomit := make([]bool, len(fields))
 	for row := iterator.Next(); row != nil; row = iterator.Next() {
@@ -144,9 +146,13 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 	}
 	iterator.Reset()
 
-	// Set omit flags
+	// Set omit flags based on the notomit slice and the "omitempty" tag
 	for i, field := range fields {
-		field.SetOmit(!notomit[i])
+		if field.Is("omitempty") && !notomit[i] {
+			field.SetOmit(true)
+		} else {
+			field.SetOmit(false)
+		}
 	}
 
 	// Write rows
