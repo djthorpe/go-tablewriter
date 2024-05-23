@@ -95,32 +95,6 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		}
 	}
 
-	// Create the writer object based on the format required
-	switch o.format {
-	case formatCSV:
-		w.csv = csv.NewWriter(w.w)
-		w.csv.Comma = o.delim
-	case formatText:
-		opts := []text.Opt{
-			text.OptDelim(o.delim),
-		}
-		for i, field := range meta.Fields() {
-			if textFormat := textFormat(field); textFormat.Width > 0 || textFormat.Align != 0 || textFormat.Wrap {
-				opts = append(opts, text.OptFormat(textFormat, i))
-			}
-		}
-		if o.width > 0 {
-			fmt.Println("TODO: Set width", o.width)
-		}
-		if writer, err := text.NewWriter(w.w, opts...); err != nil {
-			return err
-		} else {
-			w.text = writer
-		}
-	default:
-		return errUnsupportedFormat
-	}
-
 	// Check for zeroed-data columns - initalize the "notomit"
 	// slice to false, and then iterate over the rows to see if
 	// any columns are not zeroed, flagging them as "notomit"
@@ -153,6 +127,32 @@ func (w *Writer) Write(v any, opts ...TableOpt) error {
 		} else {
 			field.SetOmit(false)
 		}
+	}
+
+	// Create the writer object based on the format required
+	switch o.format {
+	case formatCSV:
+		w.csv = csv.NewWriter(w.w)
+		w.csv.Comma = o.delim
+	case formatText:
+		opts := []text.Opt{
+			text.OptDelim(o.delim),
+		}
+		for i, field := range meta.Fields() {
+			if textFormat := textFormat(field); textFormat.Width > 0 || textFormat.Align != 0 || textFormat.Wrap {
+				opts = append(opts, text.OptFormat(textFormat, i))
+			}
+		}
+		if o.width > 0 {
+			fmt.Println("TODO: Set width", o.width)
+		}
+		if writer, err := text.NewWriter(w.w, opts...); err != nil {
+			return err
+		} else {
+			w.text = writer
+		}
+	default:
+		return errUnsupportedFormat
 	}
 
 	// Write rows

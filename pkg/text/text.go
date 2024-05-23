@@ -39,7 +39,7 @@ func NewWriter(w io.Writer, opts ...Opt) (*Writer, error) {
 
 	// Set defaults
 	writer.delim = defaultDelim
-	if err := OptFormat(Format{Width: defaultWidth, Align: Left, Wrap: true})(&writer.opts); err != nil {
+	if err := OptFormat(Format{Width: defaultWidth, Align: Left, Wrap: false})(&writer.opts); err != nil {
 		return nil, err
 	}
 
@@ -102,6 +102,9 @@ func (w *Writer) fieldFormat(i int) Format {
 		}
 		if f.Width == 0 {
 			f.Width = def.Width
+		}
+		if !f.Wrap {
+			f.Wrap = def.Wrap
 		}
 		return f
 	}
