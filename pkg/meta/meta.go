@@ -47,6 +47,9 @@ type Field interface {
 	// Return the underlying type (dereferencing pointers)
 	Type() reflect.Type
 
+	// Return the index of the field
+	Index() []int
+
 	// Whether the field has a tag ie, Is("omitempty")
 	Is(name string) bool
 
@@ -69,11 +72,21 @@ type Field interface {
 // Create a new metadata object from a struct value and optional
 // set of tags
 func New(v any, tags ...string) (Struct, error) {
-	meta := new(meta)
-
-	// Set parameters
 	if rt, _, err := typeOf(v); err != nil {
 		return nil, err
+	} else {
+		return NewType(rt, tags...)
+	}
+}
+
+// Create a new metadata object from a reflect.Type and optional
+// set of tags
+func NewType(rt reflect.Type, tags ...string) (Struct, error) {
+	meta := new(meta)
+
+	// Check type
+	if rt.Kind() != reflect.Struct {
+		return nil, ErrBadParameter.With("NewType: not a struct")
 	} else {
 		meta.typ = rt
 	}
@@ -108,6 +121,7 @@ func (meta fieldmeta) String() string {
 	if len(meta.tuples) > 0 {
 		str += fmt.Sprintf(" tuples=%q", meta.tuples)
 	}
+	str += fmt.Sprintf(" kind=%q", meta.field.Type.Kind())
 	return str + ">"
 }
 
@@ -179,6 +193,11 @@ func (meta *fieldmeta) Name() string {
 		return meta.name
 	}
 	return meta.key
+}
+
+// Return the index of the field
+func (meta *fieldmeta) Index() []int {
+	return meta.index
 }
 
 // Return the type of field (dereferencing pointers)

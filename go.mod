@@ -1,6 +1,6 @@
 module github.com/djthorpe/go-tablewriter
 
-go 1.22
+go 1.21
 
 require (
 	github.com/djthorpe/go-errors v1.0.3

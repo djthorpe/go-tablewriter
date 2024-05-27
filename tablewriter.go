@@ -247,10 +247,12 @@ func (w *Writer) writeRow(o *options, meta meta.Struct, row any) error {
 		w.row = make([]string, len(values))
 	}
 
+	// TODO: if a field has unixtime tag, then convert to time.Time
+
 	// Marshal values
 	var result error
 	for i, v := range values {
-		if cell, err := marshal(v, o.timeLayout, o.timeLocal); err != nil {
+		if cell, err := marshal(v, false, o.timeLayout, o.timeLocal); err != nil {
 			result = errors.Join(result, err)
 		} else if cell == nil {
 			w.row[i] = o.null
