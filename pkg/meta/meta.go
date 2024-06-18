@@ -263,8 +263,12 @@ func typeOf(v any) (reflect.Type, bool, error) {
 	rt := reflect.TypeOf(v)
 	isSlice := false
 	if rt.Kind() == reflect.Slice || rt.Kind() == reflect.Array {
-		rt = rt.Elem()
-		isSlice = true
+		if t, err := sliceTypeOf(v); err != nil {
+			return nil, false, err
+		} else {
+			rt = t
+			isSlice = true
+		}
 	}
 	if rt.Kind() == reflect.Ptr {
 		rt = rt.Elem()
@@ -274,6 +278,32 @@ func typeOf(v any) (reflect.Type, bool, error) {
 	}
 	// Return success
 	return rt, isSlice, nil
+}
+
+// Returns the type of a slice or array, given that the slice might be an
+// interface to many different value types
+func sliceTypeOf(v any) (reflect.Type, error) {
+	// If it's not an interface, just return the type
+	t := reflect.TypeOf(v).Elem()
+	if t.Kind() != reflect.Interface {
+		return t, nil
+	}
+
+	// If it's an interface make sure every element in the slice or array
+	// is the same type
+	rv := reflect.ValueOf(v)
+	if rv.Len() == 0 {
+		return nil, ErrBadParameter.With("NewTableMeta: empty []", rv.Type())
+	}
+	rt := rv.Index(0).Elem().Type()
+	for i := 1; i < rv.Len(); i++ {
+		if rt != rv.Index(i).Elem().Type() {
+			return nil, ErrBadParameter.With("NewTableMeta: []interface with different types")
+		}
+	}
+
+	// Return (hopefully) the struct type
+	return rt, nil
 }
 
 // asColumns returns a slice of field metadata for a struct type
