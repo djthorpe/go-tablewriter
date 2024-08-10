@@ -70,10 +70,10 @@ Pull requests and [issues](https://github.com/djthorpe/go-tablewriter/issues) ar
 - v0.0.2 (May 2024) Documentation updates
 - v0.0.4 (May 2024) Added text wrapping for text output
 - v0.0.5 (May 2024) Exposing options for customizing the output in the struct tags
+- v0.0.9 (Aug 2024) Added a `Writeln` method for output of text
 
 Future versions will include more options for customizing the output:
 
-- Omitting columns based on zero-value
 - Estimating sizing the width of fields for the text package
 - Setting the width of the table based on terminal width
 - Adding JSON and SQL output
