@@ -65,6 +65,11 @@ func (w *Writer) Output() io.Writer {
 	return w.w
 }
 
+// Writeln will write a single line of text to the output
+func (w *Writer) Writeln(v ...any) (int, error) {
+	return w.w.Write([]byte(fmt.Sprintln(v...)))
+}
+
 // Write the table to output, applying any options which override to the
 // options passed to the New method
 func (w *Writer) Write(v any, opts ...TableOpt) error {
