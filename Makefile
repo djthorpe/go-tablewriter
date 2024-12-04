@@ -10,14 +10,14 @@ BUILD_LD_FLAGS += -X $(BUILD_MODULE)/pkg/version.GitHash=$(shell git rev-parse H
 BUILD_LD_FLAGS += -X $(BUILD_MODULE)/pkg/version.GoBuildTime=$(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 BUILD_FLAGS = -ldflags "-s -w $(BUILD_LD_FLAGS)" 
 
+.PHONY: all test dependencies clean
+
 # Targets
 all: dependencies clean test
 
 test:
 	@${GO} mod tidy
 	@${GO} test -v .
-
-FORCE:
 
 dependencies:
 	@test -f "${GO}" && test -x "${GO}"  || (echo "Missing go binary" && exit 1)

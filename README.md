@@ -21,8 +21,9 @@ func main() {
 }
 ```
 
-The `Write` function expects a single struct or a slice of structs as the first argument. Each struct represents a row in the table. 
-The struct fields (including any which are embedded) are used as columns in the table.
+The `Write` function expects a single struct or a slice of structs as the first argument. Each struct
+represents a row in the table. The struct fields (including any which are embedded) are used as
+columns in the table.
 
 ## Table Options
 
@@ -71,6 +72,7 @@ Pull requests and [issues](https://github.com/djthorpe/go-tablewriter/issues) ar
 - v0.0.4 (May 2024) Added text wrapping for text output
 - v0.0.5 (May 2024) Exposing options for customizing the output in the struct tags
 - v0.0.9 (Aug 2024) Added a `Writeln` method for output of text
+- v0.0.10 (Dec 2024) Upgraded dependencies
 
 Future versions will include more options for customizing the output:
 
